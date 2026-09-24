@@ -1,0 +1,17 @@
+# IntelliJ
+.idea/
+*.iml
+
+# Maven
+target/
+
+# Environment / secrets
+.env
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.dblogs/
+logs/

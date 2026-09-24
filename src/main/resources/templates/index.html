@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Student Management System</title>
+
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+<!-- ================= LOGIN SCREEN ================= -->
+
+<div id="loginScreen" class="login-screen">
+
+    <div class="login-card">
+
+        <div class="login-icon">🎓</div>
+
+        <h1>Student Management System</h1>
+
+        <p>Sign in to manage student records</p>
+
+        <form id="loginForm">
+
+            <div class="form-group">
+                <label for="username">Username</label>
+
+                <input
+                        type="text"
+                        id="username"
+                        placeholder="Enter username"
+                        required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+
+                <input
+                        type="password"
+                        id="password"
+                        placeholder="Enter password"
+                        required>
+            </div>
+
+            <button type="submit" class="login-btn">
+                Sign In
+            </button>
+
+            <p id="loginError" class="login-error"></p>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= DASHBOARD ================= -->
+
+<div id="dashboard" class="container dashboard-hidden">
+
+    <!-- HEADER -->
+
+    <div class="header">
+
+        <div>
+            <h1>Student Management System</h1>
+            <p>Manage student records efficiently</p>
+        </div>
+
+        <div class="header-actions">
+
+            <span id="userRole" class="user-role"></span>
+
+            <button
+                    id="addStudentBtn"
+                    class="add-btn"
+                    onclick="openAddModal()">
+                + Add Student
+            </button>
+
+            <button
+                    id="logoutBtn"
+                    class="logout-btn">
+                Logout
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- STATISTICS -->
+
+    <div class="stats">
+
+        <div class="stat-card">
+            <span>Total Students</span>
+            <strong th:text="${students.size()}">0</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Courses</span>
+            <strong id="courseCount">0</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Average Marks</span>
+            <strong id="averageMarks">0</strong>
+        </div>
+
+        <div class="stat-card">
+            <span>Top Marks</span>
+            <strong id="topMarks">0</strong>
+        </div>
+
+    </div>
+
+
+    <!-- STUDENT SECTION -->
+
+    <div class="student-section">
+
+        <div class="section-header">
+
+            <div>
+                <h2>All Students</h2>
+                <p>View and manage student records</p>
+            </div>
+
+            <div class="search-box">
+
+                <input
+                        type="text"
+                        id="searchInput"
+                        placeholder="Search students...">
+
+            </div>
+
+        </div>
+
+
+        <!-- TABLE -->
+
+        <div class="table-container">
+
+            <table id="studentTable">
+
+                <thead>
+
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>City</th>
+                    <th>Course</th>
+                    <th>Marks</th>
+                    <th>Actions</th>
+                </tr>
+
+                </thead>
+
+                <tbody>
+
+                <tr th:each="student : ${students}">
+
+                    <td th:text="${student.id}"></td>
+
+                    <td>
+                        <strong th:text="${student.name}"></strong>
+                    </td>
+
+                    <td th:text="${student.email}"></td>
+
+                    <td th:text="${student.phone}"></td>
+
+                    <td th:text="${student.city}"></td>
+
+                    <td>
+                        <span
+                                class="course-badge"
+                                th:text="${student.course}">
+                        </span>
+                    </td>
+
+                    <td>
+                        <span
+                                class="marks-badge"
+                                th:text="${student.marks}">
+                        </span>
+                    </td>
+
+                    <td class="actions">
+
+                        <button
+                                class="edit-btn"
+                                th:attr="onclick=|openEditModal(${student.id}, '${student.name}', '${student.email}', '${student.phone}', '${student.city}', '${student.course}', ${student.marks})|">
+                            Edit
+                        </button>
+
+                        <button
+                                class="delete-btn"
+                                th:attr="onclick=|deleteStudent(${student.id}, this)|">
+                            Delete
+                        </button>
+
+                    </td>
+
+                </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ================= STUDENT MODAL ================= -->
+
+<div id="studentModal" class="modal">
+
+    <div class="modal-card">
+
+        <div class="modal-header">
+
+            <div>
+                <h2 id="modalTitle">Add Student</h2>
+
+                <p id="modalSubtitle">
+                    Enter student details
+                </p>
+            </div>
+
+            <button
+                    class="close-btn"
+                    onclick="closeModal()">
+                &times;
+            </button>
+
+        </div>
+
+
+        <form id="studentForm">
+
+            <input
+                    type="hidden"
+                    id="studentId">
+
+
+            <div class="form-grid">
+
+                <div class="form-group">
+
+                    <label for="studentName">
+                        Name
+                    </label>
+
+                    <input
+                            type="text"
+                            id="studentName"
+                            placeholder="Enter name"
+                            required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="studentEmail">
+                        Email
+                    </label>
+
+                    <input
+                            type="email"
+                            id="studentEmail"
+                            placeholder="Enter email"
+                            required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="studentPhone">
+                        Phone
+                    </label>
+
+                    <input
+                            type="text"
+                            id="studentPhone"
+                            placeholder="Enter phone"
+                            required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="studentCity">
+                        City
+                    </label>
+
+                    <input
+                            type="text"
+                            id="studentCity"
+                            placeholder="Enter city"
+                            required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="studentCourse">
+                        Course
+                    </label>
+
+                    <input
+                            type="text"
+                            id="studentCourse"
+                            placeholder="Enter course"
+                            required>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="studentMarks">
+                        Marks
+                    </label>
+
+                    <input
+                            type="number"
+                            id="studentMarks"
+                            min="0"
+                            max="100"
+                            placeholder="0 - 100"
+                            required>
+
+                </div>
+
+            </div>
+
+
+            <p id="formError" class="form-error"></p>
+
+
+            <div class="modal-actions">
+
+                <button
+                        type="button"
+                        class="cancel-btn"
+                        onclick="closeModal()">
+                    Cancel
+                </button>
+
+                <button
+                        type="submit"
+                        class="save-btn">
+                    Save Student
+                </button>
+
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+<!-- ================= JAVASCRIPT ================= -->
+
+<script>
+
+    /* ================= ELEMENTS ================= */
+
+    const loginScreen =
+        document.getElementById("loginScreen");
+
+    const dashboard =
+        document.getElementById("dashboard");
+
+    const loginForm =
+        document.getElementById("loginForm");
+
+    const loginError =
+        document.getElementById("loginError");
+
+
+    /* ================= JWT ROLE ================= */
+
+    function getUserRole() {
+
+        const token =
+            localStorage.getItem("accessToken");
+
+        if (!token) {
+            return null;
+        }
+
+        try {
+
+            const payload =
+                JSON.parse(
+                    atob(token.split(".")[1])
+                );
+
+            return payload.role;
+
+        } catch (error) {
+
+            console.error(
+                "Unable to read JWT role:",
+                error
+            );
+
+            return null;
+        }
+    }
+
+
+    /* ================= ROLE PERMISSIONS ================= */
+
+    function applyRolePermissions() {
+
+        const role =
+            getUserRole();
+
+        const addButton =
+            document.getElementById(
+                "addStudentBtn"
+            );
+
+        const editButtons =
+            document.querySelectorAll(
+                ".edit-btn"
+            );
+
+        const deleteButtons =
+            document.querySelectorAll(
+                ".delete-btn"
+            );
+
+        const userRole =
+            document.getElementById(
+                "userRole"
+            );
+
+
+        if (userRole && role) {
+
+            userRole.innerText =
+                role === "ROLE_ADMIN"
+                    ? "ADMIN"
+                    : "USER";
+
+        }
+
+
+        if (role === "ROLE_USER") {
+
+            if (addButton) {
+
+                addButton.style.display =
+                    "none";
+
+            }
+
+            editButtons.forEach(
+                function (button) {
+
+                    button.style.display =
+                        "none";
+
+                }
+            );
+
+            deleteButtons.forEach(
+                function (button) {
+
+                    button.style.display =
+                        "none";
+
+                }
+            );
+
+        }
+
+    }
+
+
+    /* ================= LOGIN CHECK ================= */
+
+    const existingToken =
+        localStorage.getItem("accessToken");
+
+    if (existingToken) {
+
+        loginScreen.style.display =
+            "none";
+
+        dashboard.classList.remove(
+            "dashboard-hidden"
+        );
+
+        applyRolePermissions();
+
+    }
+
+
+    /* ================= LOGIN ================= */
+
+    loginForm.addEventListener(
+        "submit",
+        async function (event) {
+
+            event.preventDefault();
+
+            loginError.innerText = "";
+
+            const username =
+                document.getElementById(
+                    "username"
+                ).value;
+
+            const password =
+                document.getElementById(
+                    "password"
+                ).value;
+
+
+            try {
+
+                const response =
+                    await fetch(
+                        "/auth/login",
+                        {
+
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify({
+                                    username:
+                                    username,
+                                    password:
+                                    password
+                                })
+
+                        }
+                    );
+
+
+                if (!response.ok) {
+
+                    loginError.innerText =
+                        "Invalid username or password.";
+
+                    return;
+
+                }
+
+
+                const data =
+                    await response.json();
+
+
+                localStorage.setItem(
+                    "accessToken",
+                    data.token
+                );
+
+                localStorage.setItem(
+                    "refreshToken",
+                    data.refreshToken
+                );
+
+
+                loginScreen.style.display =
+                    "none";
+
+                dashboard.classList.remove(
+                    "dashboard-hidden"
+                );
+
+                applyRolePermissions();
+
+            }
+            catch (error) {
+
+                console.error(error);
+
+                loginError.innerText =
+                    "Unable to connect to server.";
+
+            }
+
+        }
+    );
+
+
+    /* ================= LOGOUT ================= */
+
+    document
+        .getElementById("logoutBtn")
+        .addEventListener(
+            "click",
+            function () {
+
+                localStorage.removeItem(
+                    "accessToken"
+                );
+
+                localStorage.removeItem(
+                    "refreshToken"
+                );
+
+                location.reload();
+
+            }
+        );
+
+
+    /* ================= SEARCH ================= */
+
+    document
+        .getElementById("searchInput")
+        .addEventListener(
+            "keyup",
+            function () {
+
+                const searchValue =
+                    this.value.toLowerCase();
+
+                const rows =
+                    document.querySelectorAll(
+                        "#studentTable tbody tr"
+                    );
+
+
+                rows.forEach(
+                    function (row) {
+
+                        const text =
+                            row.innerText
+                                .toLowerCase();
+
+                        row.style.display =
+                            text.includes(
+                                searchValue
+                            )
+                                ? ""
+                                : "none";
+
+                    }
+                );
+
+            }
+        );
+
+
+    /* ================= STATISTICS ================= */
+
+    function updateStatistics() {
+
+        const rows =
+            document.querySelectorAll(
+                "#studentTable tbody tr"
+            );
+
+
+        const courses =
+            new Set();
+
+        let totalMarks = 0;
+
+        let topMarks = 0;
+
+
+        rows.forEach(
+            function (row) {
+
+                const course =
+                    row.children[5]
+                        .innerText;
+
+                const marks =
+                    Number(
+                        row.children[6]
+                            .innerText
+                    );
+
+
+                courses.add(course);
+
+                totalMarks += marks;
+
+
+                if (marks > topMarks) {
+
+                    topMarks = marks;
+
+                }
+
+            }
+        );
+
+
+        document.getElementById(
+            "courseCount"
+        ).innerText =
+            courses.size;
+
+
+        document.getElementById(
+            "topMarks"
+        ).innerText =
+            topMarks;
+
+
+        document.getElementById(
+            "averageMarks"
+        ).innerText =
+            rows.length > 0
+                ? (
+                    totalMarks /
+                    rows.length
+                ).toFixed(1)
+                : 0;
+
+    }
+
+
+    updateStatistics();
+
+
+    /* ================= TOKEN ================= */
+
+    function getToken() {
+
+        return localStorage.getItem(
+            "accessToken"
+        );
+
+    }
+
+
+    /* ================= ADD MODAL ================= */
+
+    function openAddModal() {
+
+        if (getUserRole() !== "ROLE_ADMIN") {
+
+            alert(
+                "Only administrators can add students."
+            );
+
+            return;
+
+        }
+
+
+        editingStudentId = null;
+
+
+        document.getElementById(
+            "modalTitle"
+        ).innerText =
+            "Add Student";
+
+
+        document.getElementById(
+            "modalSubtitle"
+        ).innerText =
+            "Enter student details";
+
+
+        document.getElementById(
+            "studentForm"
+        ).reset();
+
+
+        document.getElementById(
+            "studentId"
+        ).value = "";
+
+
+        document.getElementById(
+            "formError"
+        ).innerText = "";
+
+
+        document.getElementById(
+            "studentModal"
+        ).style.display =
+            "flex";
+
+    }
+
+
+    /* ================= EDIT MODAL ================= */
+
+    let editingStudentId = null;
+
+
+    function openEditModal(
+        id,
+        name,
+        email,
+        phone,
+        city,
+        course,
+        marks
+    ) {
+
+        if (getUserRole() !== "ROLE_ADMIN") {
+
+            alert(
+                "Only administrators can edit students."
+            );
+
+            return;
+
+        }
+
+
+        editingStudentId = id;
+
+
+        document.getElementById(
+            "modalTitle"
+        ).innerText =
+            "Edit Student";
+
+
+        document.getElementById(
+            "modalSubtitle"
+        ).innerText =
+            "Update student details";
+
+
+        document.getElementById(
+            "studentId"
+        ).value =
+            id;
+
+
+        document.getElementById(
+            "studentName"
+        ).value =
+            name;
+
+
+        document.getElementById(
+            "studentEmail"
+        ).value =
+            email;
+
+
+        document.getElementById(
+            "studentPhone"
+        ).value =
+            phone;
+
+
+        document.getElementById(
+            "studentCity"
+        ).value =
+            city;
+
+
+        document.getElementById(
+            "studentCourse"
+        ).value =
+            course;
+
+
+        document.getElementById(
+            "studentMarks"
+        ).value =
+            marks;
+
+
+        document.getElementById(
+            "formError"
+        ).innerText = "";
+
+
+        document.getElementById(
+            "studentModal"
+        ).style.display =
+            "flex";
+
+    }
+
+
+    /* ================= CLOSE MODAL ================= */
+
+    function closeModal() {
+
+        document.getElementById(
+            "studentModal"
+        ).style.display =
+            "none";
+
+    }
+
+
+    /* ================= SAVE STUDENT ================= */
+
+    document
+        .getElementById("studentForm")
+        .addEventListener(
+            "submit",
+            async function (event) {
+
+                event.preventDefault();
+
+
+                if (
+                    getUserRole() !==
+                    "ROLE_ADMIN"
+                ) {
+
+                    alert(
+                        "Only administrators can perform this operation."
+                    );
+
+                    return;
+
+                }
+
+
+                const token =
+                    getToken();
+
+
+                if (!token) {
+
+                    alert(
+                        "Please login again."
+                    );
+
+                    location.reload();
+
+                    return;
+
+                }
+
+
+                const student = {
+
+                    name:
+                    document.getElementById(
+                        "studentName"
+                    ).value,
+
+                    email:
+                    document.getElementById(
+                        "studentEmail"
+                    ).value,
+
+                    phone:
+                    document.getElementById(
+                        "studentPhone"
+                    ).value,
+
+                    city:
+                    document.getElementById(
+                        "studentCity"
+                    ).value,
+
+                    course:
+                    document.getElementById(
+                        "studentCourse"
+                    ).value,
+
+                    marks:
+                        Number(
+                            document.getElementById(
+                                "studentMarks"
+                            ).value
+                        )
+
+                };
+
+
+                let url =
+                    "/studentmgmt";
+
+                let method =
+                    "POST";
+
+
+                if (
+                    editingStudentId !== null
+                ) {
+
+                    url =
+                        "/studentmgmt/" +
+                        editingStudentId;
+
+                    method =
+                        "PUT";
+
+                }
+
+
+                try {
+
+                    const response =
+                        await fetch(
+                            url,
+                            {
+
+                                method:
+                                method,
+
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json",
+
+                                    "Authorization":
+                                        "Bearer " +
+                                        token
+
+                                },
+
+                                body:
+                                    JSON.stringify(
+                                        student
+                                    )
+
+                            }
+                        );
+
+
+                    if (
+                        response.status === 401
+                    ) {
+
+                        alert(
+                            "Session expired. Please login again."
+                        );
+
+                        localStorage.removeItem(
+                            "accessToken"
+                        );
+
+                        localStorage.removeItem(
+                            "refreshToken"
+                        );
+
+                        location.reload();
+
+                        return;
+
+                    }
+
+
+                    if (
+                        response.status === 403
+                    ) {
+
+                        alert(
+                            "You do not have permission for this operation."
+                        );
+
+                        return;
+
+                    }
+
+
+                    if (!response.ok) {
+
+                        document.getElementById(
+                            "formError"
+                        ).innerText =
+                            "Unable to save student. Please check the entered data.";
+
+                        return;
+
+                    }
+
+
+                    closeModal();
+
+                    location.reload();
+
+                }
+                catch (error) {
+
+                    console.error(error);
+
+                    document.getElementById(
+                        "formError"
+                    ).innerText =
+                        "Unable to connect to server.";
+
+                }
+
+            }
+        );
+
+
+    /* ================= DELETE ================= */
+
+    async function deleteStudent(
+        id,
+        button
+    ) {
+
+        if (
+            getUserRole() !==
+            "ROLE_ADMIN"
+        ) {
+
+            alert(
+                "Only administrators can delete students."
+            );
+
+            return;
+
+        }
+
+
+        const confirmed =
+            confirm(
+                "Are you sure you want to delete this student?"
+            );
+
+
+        if (!confirmed) {
+
+            return;
+
+        }
+
+
+        const token =
+            getToken();
+
+
+        if (!token) {
+
+            alert(
+                "Please login again."
+            );
+
+            location.reload();
+
+            return;
+
+        }
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/studentmgmt/" + id,
+                    {
+
+                        method:
+                            "DELETE",
+
+                        headers: {
+
+                            "Authorization":
+                                "Bearer " +
+                                token
+
+                        }
+
+                    }
+                );
+
+
+            if (
+                response.status === 401
+            ) {
+
+                alert(
+                    "Session expired. Please login again."
+                );
+
+                localStorage.removeItem(
+                    "accessToken"
+                );
+
+                localStorage.removeItem(
+                    "refreshToken"
+                );
+
+                location.reload();
+
+                return;
+
+            }
+
+
+            if (
+                response.status === 403
+            ) {
+
+                alert(
+                    "You do not have permission to delete students."
+                );
+
+                return;
+
+            }
+
+
+            if (!response.ok) {
+
+                alert(
+                    "Unable to delete student."
+                );
+
+                return;
+
+            }
+
+
+            const row =
+                button.closest("tr");
+
+
+            if (row) {
+
+                row.remove();
+
+            }
+
+
+            updateStatistics();
+
+        }
+        catch (error) {
+
+            console.error(error);
+
+            alert(
+                "Unable to connect to server."
+            );
+
+        }
+
+    }
+
+
+    /* ================= MODAL OUTSIDE CLICK ================= */
+
+    window.addEventListener(
+        "click",
+        function (event) {
+
+            const modal =
+                document.getElementById(
+                    "studentModal"
+                );
+
+
+            if (event.target === modal) {
+
+                closeModal();
+
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>
