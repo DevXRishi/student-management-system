@@ -11,8 +11,8 @@
 	<groupId>com.risi</groupId>
 	<artifactId>student-management</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
+	<name>Educore</name>
+	<description>Educore Student Management System</description>
 	<url/>
 	<licenses>
 		<license/>

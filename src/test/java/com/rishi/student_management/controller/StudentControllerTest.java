@@ -19,6 +19,8 @@ import org.springframework.boot.security.autoconfigure.web.servlet.SecurityFilte
 import org.springframework.boot.security.autoconfigure.web.servlet.ServletWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,9 +40,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-
 @WebMvcTest(StudentController.class)
 @ImportAutoConfiguration({SecurityAutoConfiguration.class, ServletWebSecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class, CustomAccessDeniedHandler.class})
@@ -48,7 +47,6 @@ class StudentControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
-
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -63,35 +61,75 @@ class StudentControllerTest {
 
     @Test
     void getAllStudentsWithoutAuthentication_shouldReturn401() throws Exception {
-        mockMvc.perform(get("/studentmgmt")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/studentmgmt"))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
     void getAllStudents_shouldReturn200() throws Exception {
+        Page<StudentResponse> page = new PageImpl<>(List.of(studentResponse()));
+        when(service.getAllStudents(0, 5, "id", "asc")).thenReturn(page);
 
-        StudentResponse student = studentResponse();
-
-        Page<StudentResponse> page =
-                new PageImpl<>(List.of(student));
-
-        when(service.getAllStudents(0, 5, "id", "asc"))
-                .thenReturn(page);
-
-        mockMvc.perform(get("/studentmgmt")
-                        .with(user("admin").roles("ADMIN")))
+        mockMvc.perform(get("/studentmgmt").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Rishi"))
                 .andExpect(jsonPath("$.content[0].email").value("rishi@gmail.com"));
     }
 
     @Test
+    void searchStudents_shouldDelegateToSearchService() throws Exception {
+        Page<StudentResponse> page = new PageImpl<>(List.of(studentResponse()));
+        when(service.searchStudents("Rishi", "CSE", 0, 10, "name", "asc")).thenReturn(page);
+
+        mockMvc.perform(get("/studentmgmt")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sortBy", "name")
+                        .param("direction", "asc")
+                        .param("search", "Rishi")
+                        .param("course", "CSE")
+                        .with(user("user").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].course").value("CSE"));
+
+        verify(service).searchStudents("Rishi", "CSE", 0, 10, "name", "asc");
+    }
+
+    @Test
+    void getCourses_shouldReturn200() throws Exception {
+        when(service.getAllCourses()).thenReturn(List.of("CSE", "IT"));
+
+        mockMvc.perform(get("/studentmgmt/courses").with(user("user").roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0]").value("CSE"))
+                .andExpect(jsonPath("$[1]").value("IT"));
+    }
+
+    @Test
+    void addStudentAsUser_shouldReturn403() throws Exception {
+        mockMvc.perform(post("/studentmgmt")
+                        .with(user("user").roles("USER"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(studentRequest())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void addStudent_shouldReturnSuccess() throws Exception {
         StudentRequest request = studentRequest();
         StudentResponse response = studentResponse();
-
         when(service.addStudent(any(StudentRequest.class))).thenReturn(response);
 
-        mockMvc.perform(post("/studentmgmt").with(user("admin").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.name").value("Rishi")).andExpect(jsonPath("$.email").value("rishi@gmail.com"));
+        mockMvc.perform(post("/studentmgmt")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Rishi"))
+                .andExpect(jsonPath("$.email").value("rishi@gmail.com"));
 
         verify(service).addStudent(any(StudentRequest.class));
     }
@@ -100,7 +138,11 @@ class StudentControllerTest {
     void getStudentById_shouldReturn200() throws Exception {
         when(service.getStudentById(1)).thenReturn(studentResponse());
 
-        mockMvc.perform(get("/studentmgmt/1").with(user("admin").roles("ADMIN"))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.name").value("Rishi")).andExpect(jsonPath("$.email").value("rishi@gmail.com"));
+        mockMvc.perform(get("/studentmgmt/1").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Rishi"))
+                .andExpect(jsonPath("$.email").value("rishi@gmail.com"));
 
         verify(service).getStudentById(1);
     }
@@ -109,7 +151,10 @@ class StudentControllerTest {
     void getStudentById_shouldReturn404() throws Exception {
         when(service.getStudentById(1)).thenThrow(new StudentNotFoundException("Student not found with id: 1"));
 
-        mockMvc.perform(get("/studentmgmt/1").with(user("admin").roles("ADMIN"))).andExpect(status().isNotFound()).andExpect(jsonPath("$.status").value(404)).andExpect(jsonPath("$.message").value("Student not found with id: 1"));
+        mockMvc.perform(get("/studentmgmt/1").with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Student not found with id: 1"));
 
         verify(service).getStudentById(1);
     }
@@ -118,10 +163,17 @@ class StudentControllerTest {
     void updateStudent_shouldReturn200() throws Exception {
         StudentRequest request = studentRequest();
         StudentResponse response = studentResponse();
-
         when(service.updateStudent(1, request)).thenReturn(response);
 
-        mockMvc.perform(put("/studentmgmt/1").with(user("admin").roles("ADMIN")).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(request))).andExpect(status().isOk()).andExpect(jsonPath("$.id").value(1)).andExpect(jsonPath("$.name").value("Rishi")).andExpect(jsonPath("$.email").value("rishi@gmail.com"));
+        mockMvc.perform(put("/studentmgmt/1")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Rishi"))
+                .andExpect(jsonPath("$.email").value("rishi@gmail.com"));
 
         verify(service).updateStudent(1, request);
     }
@@ -130,7 +182,11 @@ class StudentControllerTest {
     void deleteStudent_shouldReturnSuccess() throws Exception {
         doNothing().when(service).deleteStudent(1);
 
-        mockMvc.perform(delete("/studentmgmt/1").with(user("admin").roles("ADMIN")).with(csrf())).andExpect(status().isOk()).andExpect(jsonPath("$").value("Student Deleted Successfully"));
+        mockMvc.perform(delete("/studentmgmt/1")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value("Student Deleted Successfully"));
 
         verify(service).deleteStudent(1);
     }

@@ -1,53 +1,33 @@
 package com.rishi.student_management.exception;
 
+import com.rishi.student_management.payload.ErrorResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import jakarta.servlet.http.HttpServletRequest;
+
 import java.time.LocalDateTime;
-import com.rishi.student_management.payload.ErrorResponse;
-
-import org.springframework.web.bind.MethodArgumentNotValidException;
-
 import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(
-                    GlobalExceptionHandler.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(StudentNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleStudentNotFound(
             StudentNotFoundException ex,
             HttpServletRequest request) {
-
-
-        ErrorResponse error = new ErrorResponse();
-
-        error.setTimestamp(LocalDateTime.now());
-
-        error.setStatus(HttpStatus.NOT_FOUND.value());
-
-        error.setError(HttpStatus.NOT_FOUND.getReasonPhrase());
-
-        error.setMessage(ex.getMessage());
-
-        error.setPath(request.getRequestURI());
-
-        logger.error(
-                "Student Not Found : {}",
-                ex.getMessage());
-
-        return new ResponseEntity<>(
-                error,
-                HttpStatus.NOT_FOUND);
+        logger.warn("Student not found: {}", ex.getMessage());
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage(), request, null);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -56,61 +36,74 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
 
         Map<String, String> validationErrors = new HashMap<>();
+        ex.getBindingResult().getFieldErrors()
+                .forEach(error -> validationErrors.put(error.getField(), error.getDefaultMessage()));
 
-        ex.getBindingResult()
-                .getFieldErrors()
-                .forEach(error ->
+        logger.warn("Validation failed: {}", validationErrors);
+        return buildError(HttpStatus.BAD_REQUEST, "Validation Failed", request, validationErrors);
+    }
 
-                        validationErrors.put(
-                                error.getField(),
-                                error.getDefaultMessage()
-                        )
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(
+            DataIntegrityViolationException ex,
+            HttpServletRequest request) {
+        logger.warn("Data integrity violation: {}", ex.getMessage());
+        return buildError(
+                HttpStatus.CONFLICT,
+                "A student with this email or phone already exists.",
+                request,
+                null
+        );
+    }
 
-                );
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            AuthenticationException ex,
+            HttpServletRequest request) {
+        logger.warn("Authentication failed: {}", ex.getMessage());
+        return buildError(HttpStatus.UNAUTHORIZED, "Invalid username or password.", request, null);
+    }
 
-        ErrorResponse response = new ErrorResponse();
-
-        response.setTimestamp(LocalDateTime.now());
-
-        response.setStatus(HttpStatus.BAD_REQUEST.value());
-
-        response.setError(HttpStatus.BAD_REQUEST.getReasonPhrase());
-
-        response.setMessage("Validation Failed");
-
-        response.setPath(request.getRequestURI());
-
-        response.setValidationErrors(validationErrors);
-
-        logger.error("Validation Failed : {}", validationErrors);
-
-        return ResponseEntity
-                .status(HttpStatus.BAD_REQUEST)
-                .body(response);
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            AccessDeniedException ex,
+            HttpServletRequest request) {
+        logger.warn("Access denied: {}", ex.getMessage());
+        return buildError(
+                HttpStatus.FORBIDDEN,
+                "You do not have permission to access this resource.",
+                request,
+                null
+        );
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex,
             HttpServletRequest request) {
-
-        ErrorResponse error = new ErrorResponse();
-
-        error.setTimestamp(LocalDateTime.now());
-
-        error.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());
-
-        error.setError(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase());
-
-        error.setMessage("Something went wrong. Please try again later.");
-
-        error.setPath(request.getRequestURI());
-
-        logger.error("Unexpected Exception : ", ex);
-
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(error);
+        logger.error("Unexpected exception", ex);
+        return buildError(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                "Something went wrong. Please try again later.",
+                request,
+                null
+        );
     }
 
+    private ResponseEntity<ErrorResponse> buildError(
+            HttpStatus status,
+            String message,
+            HttpServletRequest request,
+            Map<String, String> validationErrors) {
+
+        ErrorResponse error = new ErrorResponse();
+        error.setTimestamp(LocalDateTime.now());
+        error.setStatus(status.value());
+        error.setError(status.getReasonPhrase());
+        error.setMessage(message);
+        error.setPath(request.getRequestURI());
+        error.setValidationErrors(validationErrors);
+
+        return ResponseEntity.status(status).body(error);
+    }
 }
